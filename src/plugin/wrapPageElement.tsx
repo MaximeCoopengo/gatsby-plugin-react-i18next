@@ -3,10 +3,19 @@ import {withPrefix, WrapPageElementBrowserArgs} from 'gatsby';
 // @ts-ignore
 import browserLang from 'browser-lang';
 import {I18NextContext, LANGUAGE_KEY, PageContext, PluginOptions, LocaleNode} from '../types';
-import i18next, {i18n as I18n} from 'i18next';
+import i18next, {i18n as I18n, FormatFunction} from 'i18next';
 import {I18nextProvider} from 'react-i18next';
 import {I18nextContext} from '../i18nextContext';
 import outdent from 'outdent';
+import moment from 'moment';
+
+const FORMAT_FUNCTION_CUSTOM: FormatFunction = (value, format, lng): string => {
+  if (value instanceof Date || moment.isMoment(value)) {
+    return moment(value).format(format);
+  }
+
+  return value;
+};
 
 const withI18next = (i18n: I18n, context: I18NextContext) => (children: any) => {
   return (
@@ -113,7 +122,8 @@ export const wrapPageElement = (
     fallbackNS,
     react: {
       useSuspense: false
-    }
+    },
+    interpolation: {...i18nextOptions.interpolation, format: FORMAT_FUNCTION_CUSTOM}
   });
 
   localeNodes.forEach(({node}) => {
