@@ -8,14 +8,7 @@ import {I18nextProvider} from 'react-i18next';
 import {I18nextContext} from '../i18nextContext';
 import outdent from 'outdent';
 import moment from 'moment';
-
-const FORMAT_FUNCTION_CUSTOM: FormatFunction = (value, format, lng): string => {
-  if (value instanceof Date || moment.isMoment(value)) {
-    return moment(value).format(format);
-  }
-
-  return value;
-};
+import {formatCurrency} from '@sumup/intl';
 
 const withI18next = (i18n: I18n, context: I18NextContext) => (children: any) => {
   return (
@@ -113,6 +106,28 @@ export const wrapPageElement = (
   const fallbackNS = namespaces.filter((ns) => ns !== defaultNS);
 
   const i18n = i18next.createInstance();
+
+  const FORMAT_FUNCTION_CUSTOM: FormatFunction = (
+    value,
+    rawFormat = '',
+    lng = language
+  ): string => {
+    const [format, ...additionalValues] = rawFormat.split(',').map((v) => v.trim());
+
+    switch (format) {
+      case 'date':
+        if (value instanceof Date || moment.isMoment(value)) {
+          return moment(value).locale(language).format(additionalValues[0]);
+        }
+        break;
+      case 'currency':
+        return formatCurrency(value, lng);
+      default:
+        return value;
+    }
+
+    return value;
+  };
 
   i18n.init({
     ...i18nextOptions,
