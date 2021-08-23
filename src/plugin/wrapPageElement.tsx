@@ -1,19 +1,29 @@
 import React from 'react';
-import {withPrefix, WrapPageElementBrowserArgs} from 'gatsby';
+import { withPrefix, WrapPageElementBrowserArgs } from 'gatsby';
 // @ts-ignore
 import browserLang from 'browser-lang';
-import {I18NextContext, LANGUAGE_KEY, PageContext, PluginOptions, LocaleNode} from '../types';
-import i18next, {i18n as I18n, FormatFunction} from 'i18next';
-import {I18nextProvider} from 'react-i18next';
-import {I18nextContext} from '../i18nextContext';
+import {
+  I18NextContext,
+  LANGUAGE_KEY,
+  PageContext,
+  PluginOptions,
+  LocaleNode,
+} from '../types';
+import i18next, { i18n as I18n, FormatFunction } from 'i18next';
+import { I18nextProvider } from 'react-i18next';
+import { I18nextContext } from '../i18nextContext';
 import outdent from 'outdent';
 import moment from 'moment';
-import {formatCurrency} from '@sumup/intl';
+import { formatCurrency } from '@sumup/intl';
 
-const withI18next = (i18n: I18n, context: I18NextContext) => (children: any) => {
+const withI18next = (i18n: I18n, context: I18NextContext) => (
+  children: any
+) => {
   return (
     <I18nextProvider i18n={i18n}>
-      <I18nextContext.Provider value={context}>{children}</I18nextContext.Provider>
+      <I18nextContext.Provider value={context}>
+        {children}
+      </I18nextContext.Provider>
     </I18nextProvider>
   );
 };
@@ -28,22 +38,29 @@ const removePathPrefix = (pathname: string) => {
 };
 
 export const wrapPageElement = (
-  {element, props}: WrapPageElementBrowserArgs<any, PageContext>,
+  { element, props }: WrapPageElementBrowserArgs<any, PageContext>,
   {
     i18nextOptions = {},
     redirect = true,
     generateDefaultLanguagePage = false,
     siteUrl,
-    localeJsonNodeName = 'locales'
+    localeJsonNodeName = 'locales',
   }: PluginOptions
 ) => {
   if (!props) return;
-  const {data, pageContext, location} = props;
-  const {routed, language, languages, originalPath, defaultLanguage, path} = pageContext.i18n;
+  const { data, pageContext, location } = props;
+  const {
+    routed,
+    language,
+    languages,
+    originalPath,
+    defaultLanguage,
+    path,
+  } = pageContext.i18n;
   const isRedirect = redirect && !routed;
 
   if (isRedirect) {
-    const {search} = location;
+    const { search } = location;
 
     // Skip build, Browsers only
     if (typeof window !== 'undefined') {
@@ -51,7 +68,7 @@ export const wrapPageElement = (
         window.localStorage.getItem(LANGUAGE_KEY) ||
         browserLang({
           languages,
-          fallback: language
+          fallback: language,
         });
 
       if (!languages.includes(detected)) {
@@ -63,7 +80,9 @@ export const wrapPageElement = (
       if (detected !== defaultLanguage) {
         const queryParams = search || '';
         const newUrl = withPrefix(
-          `/${detected}${removePathPrefix(location.pathname)}${queryParams}${location.hash}`
+          `/${detected}${removePathPrefix(location.pathname)}${queryParams}${
+            location.hash
+          }`
         );
         window.location.replace(newUrl);
         return null;
@@ -71,9 +90,14 @@ export const wrapPageElement = (
     }
   }
 
-  const localeNodes: Array<{node: LocaleNode}> = data?.[localeJsonNodeName]?.edges || [];
+  const localeNodes: Array<{ node: LocaleNode }> =
+    data?.[localeJsonNodeName]?.edges || [];
 
-  if (languages.length > 1 && localeNodes.length === 0 && process.env.NODE_ENV === 'development') {
+  if (
+    languages.length > 1 &&
+    localeNodes.length === 0 &&
+    process.env.NODE_ENV === 'development'
+  ) {
     console.error(
       outdent`
       No translations were found in "${localeJsonNodeName}" key for "${originalPath}". 
@@ -96,14 +120,14 @@ export const wrapPageElement = (
     );
   }
 
-  const namespaces = localeNodes.map(({node}) => node.ns);
+  const namespaces = localeNodes.map(({ node }) => node.ns);
 
   // We want to set default namespace to a page namespace if it exists
   // and use other namespaces as fallback
   // this way you dont need to specify namespaces in pages
   let defaultNS = i18nextOptions.defaultNS || 'translation';
-  defaultNS = namespaces.find((ns) => ns !== defaultNS) || defaultNS;
-  const fallbackNS = namespaces.filter((ns) => ns !== defaultNS);
+  defaultNS = namespaces.find(ns => ns !== defaultNS) || defaultNS;
+  const fallbackNS = namespaces.filter(ns => ns !== defaultNS);
 
   const i18n = i18next.createInstance();
 
@@ -112,7 +136,9 @@ export const wrapPageElement = (
     rawFormat = '',
     lng = language
   ): string => {
-    const [format, ...additionalValues] = rawFormat.split(',').map((v) => v.trim());
+    const [format, ...additionalValues] = rawFormat
+      .split(',')
+      .map(v => v.trim());
 
     switch (format) {
       case 'date':
@@ -121,6 +147,9 @@ export const wrapPageElement = (
         }
         break;
       case 'currency':
+        if (lng === 'en') {
+          lng = 'en-US';
+        }
         return formatCurrency(value, lng);
       default:
         return value;
@@ -136,12 +165,15 @@ export const wrapPageElement = (
     defaultNS,
     fallbackNS,
     react: {
-      useSuspense: false
+      useSuspense: false,
     },
-    interpolation: {...i18nextOptions.interpolation, format: FORMAT_FUNCTION_CUSTOM}
+    interpolation: {
+      ...i18nextOptions.interpolation,
+      format: FORMAT_FUNCTION_CUSTOM,
+    },
   });
 
-  localeNodes.forEach(({node}) => {
+  localeNodes.forEach(({ node }) => {
     const parsedData = JSON.parse(node.data);
     i18n.addResourceBundle(node.language, node.ns, parsedData);
   });
@@ -158,7 +190,7 @@ export const wrapPageElement = (
     defaultLanguage,
     generateDefaultLanguagePage,
     siteUrl,
-    path
+    path,
   };
 
   return withI18next(i18n, context)(element);
