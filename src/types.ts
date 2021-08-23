@@ -1,5 +1,5 @@
-import {InitOptions} from 'i18next';
-import {NodeInput} from 'gatsby';
+import { InitOptions } from 'i18next';
+import { NodeInput } from 'gatsby';
 
 export const LANGUAGE_KEY = 'gatsby-i18next-language';
 
@@ -20,6 +20,7 @@ export type PluginOptions = {
   pages: Array<PageOptions>;
   localeJsonSourceName?: string;
   localeJsonNodeName?: string;
+  dynamicPages: string[];
 };
 
 export type I18NextContext = {
