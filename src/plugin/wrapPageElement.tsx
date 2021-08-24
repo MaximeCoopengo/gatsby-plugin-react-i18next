@@ -182,11 +182,18 @@ export const wrapPageElement = (
     i18n.changeLanguage(language);
   }
 
+  let newOriginalPath = originalPath;
+
+  // If dynamic route, replace :id with corresponding param
+  if (originalPath.indexOf('/:id') >= 0 && props?.params?.['*'] != null) {
+    newOriginalPath = originalPath.replace(/\/:id/, `/${props.params['*']}`);
+  }
+
   const context = {
     routed,
     language,
     languages,
-    originalPath,
+    originalPath: newOriginalPath,
     defaultLanguage,
     generateDefaultLanguagePage,
     siteUrl,

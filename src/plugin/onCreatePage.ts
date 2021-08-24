@@ -41,6 +41,7 @@ export const onCreatePage = async (
     originalPath?: string;
     routed?: boolean;
     pageOptions?: PageOptions;
+    matchPath?: string;
   };
   const generatePage = async ({
     language,
@@ -48,10 +49,12 @@ export const onCreatePage = async (
     originalPath = page.path,
     routed = false,
     pageOptions,
+    matchPath = page.matchPath,
   }: GeneratePageParams): Promise<Page<PageContext>> => {
     return {
       ...page,
       path,
+      matchPath,
       context: {
         ...page.context,
         language,
@@ -87,30 +90,41 @@ export const onCreatePage = async (
       : pageOptions.languages.filter(lng => lng !== defaultLanguage);
   }
 
+  const dynamicPage = getDynamicPage(page.path, dynamicPages);
+  let originalPath = page.path;
+  let matchPath = page.matchPath;
+
+  if (dynamicPage) {
+    originalPath = `${originalPath}:id`;
+    matchPath = `/${dynamicPage}/*`;
+  }
+
   if (pageOptions?.getLanguageFromPath) {
     const result = match<{ lang: string }>(pageOptions.matchPath)(page.path);
     if (!result) return;
     const language =
       languages.find(lng => lng === result.params.lang) || defaultLanguage;
-    const originalPath = page.path.replace(`/${language}`, '');
     const routed = Boolean(result.params.lang);
+
+    originalPath = originalPath.replace(`/${language}`, '');
+
     newPage = await generatePage({
       language,
       originalPath,
       routed,
       pageOptions,
+      matchPath,
     });
     if (routed || !pageOptions.excludeLanguages) {
       alternativeLanguages = [];
     }
   } else {
-    newPage = await generatePage({ language: defaultLanguage, pageOptions });
-  }
-
-  const dynamicPage = getDynamicPage(newPage.path, dynamicPages);
-
-  if (dynamicPage) {
-    newPage.matchPath = `/${dynamicPage}/*`;
+    newPage = await generatePage({
+      language: defaultLanguage,
+      originalPath,
+      pageOptions,
+      matchPath,
+    });
   }
 
   try {
@@ -119,21 +133,25 @@ export const onCreatePage = async (
   createPage(newPage);
 
   await BP.map(alternativeLanguages, async lng => {
+    let lngMatchPath = matchPath;
+
+    if (dynamicPage) {
+      lngMatchPath = `/${lng}${matchPath}`;
+    }
+
+    const regexp404 = new RegExp('/404/?$');
+    if (regexp404.test(page.path)) {
+      lngMatchPath = `/${lng}/*`;
+    }
+
     const localePage = await generatePage({
       language: lng,
       path: `${lng}${page.path}`,
+      originalPath,
       routed: true,
+      matchPath: lngMatchPath,
     });
 
-    const regexp404 = new RegExp('/404/?$');
-    if (regexp404.test(localePage.path)) {
-      localePage.matchPath = `/${lng}/*`;
-    }
-
-    const dynamicPage = getDynamicPage(localePage.path, dynamicPages, lng);
-    if (dynamicPage) {
-      localePage.matchPath = `${lng}/${dynamicPage}/*`;
-    }
     createPage(localePage);
   });
 };
